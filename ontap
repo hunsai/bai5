@@ -1,0 +1,190 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace ontap
+{
+    public partial class Form1 : Form
+    {
+        // kết nối CSDL
+        string conn = @"Data Source=localhost;Initial Catalog=PhongHocDB;User ID=sa;PassWord=Sqlserver123@;Encrypt=False";
+        SqlConnection ketnoi = null;
+        DataTable dt = new DataTable();
+        SqlCommand cmd = null;
+        // 
+        public Form1()
+        {
+
+            InitializeComponent();
+            KetNoiCSDL();
+   
+
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+        public void hienThiCSDL()
+        {
+            string sql = "SELECT * FROM PhongHoc";
+            SqlDataAdapter da = new SqlDataAdapter(sql, ketnoi);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            dgvPhongHoc.DataSource = dt;
+        }
+        public void KetNoiCSDL()
+        {
+            try
+            {
+                if (ketnoi == null)
+                {
+                    ketnoi = new SqlConnection(conn);
+                }
+
+                if (ketnoi.State == ConnectionState.Closed)
+                {
+                    ketnoi.Open();
+                    MessageBox.Show("Kết nối thành công", "Thông báo", MessageBoxButtons.OK);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi Kết Nối", "Thông báo", MessageBoxButtons.OK);
+            }
+        }
+        public void ResetForm()
+        {
+            // Xóa nội dung ô nhập
+            txtMaPhong.Text = "";
+            txtTenPhong.Text = "";
+
+            // Bỏ chọn combobox
+            cboDayLau.SelectedIndex = -1;
+
+
+            dgvPhongHoc.DataSource = null;
+            dgvPhongHoc.Rows.Clear();
+
+        }
+        public void Them()
+        {
+            string maPhong = txtMaPhong.Text.Trim();
+            string tenPhong = txtTenPhong.Text.Trim();
+            string dayLau = cboDayLau.Text.Trim();
+
+            string sql = "INSERT INTO PhongHoc (MaPhong, TenPhong, DayLau) VALUES (@ma, @ten, @day)";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@ma", maPhong);
+            cmd.Parameters.AddWithValue("@ten", tenPhong);
+            cmd.Parameters.AddWithValue("@day", dayLau);
+            cmd.ExecuteNonQuery();
+
+            hienThiCSDL(); // cập nhật lại DataGridView
+        }
+        public void Sua()
+        {
+            string maPhong = txtMaPhong.Text.Trim();      // giữ nguyên mã
+            string tenPhong = txtTenPhong.Text.Trim();
+            string dayLau = cboDayLau.Text.Trim();
+
+            string sql = "UPDATE PhongHoc SET TenPhong = @ten, DayLau = @day WHERE MaPhong = @ma";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@ten", tenPhong);
+            cmd.Parameters.AddWithValue("@day", dayLau);
+            cmd.Parameters.AddWithValue("@ma", maPhong);
+            cmd.ExecuteNonQuery();
+
+            hienThiCSDL(); // cập nhật lại bảng
+        }
+
+        //hien thi
+        private void btnShow_Click(object sender, EventArgs e)
+        {
+            hienThiCSDL();
+        }
+        //đóng
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+        // xóa
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            string maPhong = dgvPhongHoc.SelectedRows[0].Cells["MaPhong"].Value.ToString();
+            string sql = "DELETE FROM PhongHoc WHERE MaPhong = @ma";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@ma", maPhong);
+            cmd.ExecuteNonQuery();
+
+            hienThiCSDL(); // Làm mới danh sách sau khi xoá
+
+        }
+
+        private void btnReset_Click(object sender, EventArgs e)
+        {
+            ResetForm();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            dgvPhongHoc.CellClick += dgvPhongHoc_CellContentClick;
+        }
+
+        private void btnInsert_Click(object sender, EventArgs e)
+        {
+            Them();
+        }
+
+        private void dgvPhongHoc_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dgvPhongHoc.Rows[e.RowIndex];
+
+                txtMaPhong.Text = row.Cells["MaPhong"].Value.ToString();
+                txtTenPhong.Text = row.Cells["TenPhong"].Value.ToString();
+                cboDayLau.Text = row.Cells["DayLau"].Value.ToString();
+            }
+        }
+
+        private void btnUpdate_Click(object sender, EventArgs e)
+        {
+            Sua();
+        }
+
+        private void btnFilter_Click(object sender, EventArgs e)
+        {
+            string dayLau = cboDayLau.Text.Trim();
+
+            if (string.IsNullOrEmpty(dayLau))
+            {
+                MessageBox.Show("Vui lòng chọn Dãy lầu để lọc.", "Thông báo");
+                return;
+            }
+
+            string sql = "SELECT * FROM PhongHoc WHERE DayLau = @day";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@day", dayLau);
+
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+
+            dgvPhongHoc.DataSource = dt;
+        }
+    }
+}
