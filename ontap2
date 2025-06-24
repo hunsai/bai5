@@ -1,0 +1,235 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace ontap3
+{
+    public partial class Form1 : Form
+    {
+        // kết nối CSDL
+        string conn = @"    Data Source = localhost; Initial Catalog = SINHVIEN; User ID = sa; PassWord=Sqlserver123@; Encrypt=False";
+    
+        SqlConnection ketnoi = null;
+        DataTable dt = new DataTable();
+        SqlCommand cmd = null;
+        // 
+        public Form1()
+        {
+            InitializeComponent();
+            KetNoiCSDL();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            dgvSinhVien.CellClick += dgvSinhVien_CellContentClick;
+        }
+        
+        public void hienThiCSDL()
+        {
+            string sql = "SELECT * FROM THONGTIN";
+            SqlDataAdapter da = new SqlDataAdapter(sql, ketnoi);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            dgvSinhVien.DataSource = dt;
+        }
+        public void KetNoiCSDL()
+        {
+            try
+            {
+                if (ketnoi == null)
+                {
+                    ketnoi = new SqlConnection(conn);
+                }
+
+                if (ketnoi.State == ConnectionState.Closed)
+                {
+                    ketnoi.Open();
+                    MessageBox.Show("Kết nối thành công", "Thông báo", MessageBoxButtons.OK);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi Kết Nối", "Thông báo", MessageBoxButtons.OK);
+            }
+        }
+        public void xoa()
+        {
+            string MSSV = dgvSinhVien.SelectedRows[0].Cells["MSSV"].Value.ToString();
+            string sql = "DELETE FROM THONGTIN WHERE MSSV = @ma";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@ma",MSSV);
+            cmd.ExecuteNonQuery();
+        }
+        public void ResetForm()
+        {
+            // Xóa nội dung ô nhập
+            txtMSSV.Text = "";
+            txtHoTen.Text = "";
+
+            // Bỏ chọn combobox
+            cboBoMon.SelectedIndex = -1;
+            if (rdNam.Checked == true)
+            {
+                rdNam.Checked = false;
+            }
+            else { 
+                rdNu.Checked = false;
+            }
+
+
+            dgvSinhVien.DataSource = null;
+            dgvSinhVien.Rows.Clear();
+
+        }
+        public void Them()
+        {
+            string MSSV = txtMSSV.Text.Trim();
+            string HoTen = txtHoTen.Text.Trim();
+            string BoMon = cboBoMon.Text.Trim();
+
+            // Xác định giới tính từ RadioButton
+            string GioiTinh = "";
+            if (rdNam.Checked)
+                GioiTinh = "Nam";
+            else if (rdNu.Checked)
+                GioiTinh = "Nữ";
+
+            // Câu lệnh INSERT đầy đủ (có thêm giới tính nếu bạn có cột này trong DB)
+            string sql = "INSERT INTO THONGTIN (MSSV, HOTEN, BOMON, GIOITINH) VALUES (@ma, @ten, @bomon, @gt)";
+
+            using (SqlCommand cmd = new SqlCommand(sql, ketnoi))
+            {
+                cmd.Parameters.AddWithValue("@ma", MSSV);
+                cmd.Parameters.AddWithValue("@ten", HoTen);
+                cmd.Parameters.AddWithValue("@bomon", BoMon);
+                cmd.Parameters.AddWithValue("@gt", GioiTinh);
+                cmd.ExecuteNonQuery();
+            }
+
+            hienThiCSDL(); // cập nhật lại DataGridView
+        }
+        public void Sua()
+        {
+            string MSSV = txtMSSV.Text.Trim();
+            string HoTen = txtHoTen.Text.Trim();
+            string BoMon = cboBoMon.Text.Trim();
+
+            // Xác định giới tính từ RadioButton
+            string GioiTinh = "";
+            if (rdNam.Checked)
+                GioiTinh = "Nam";
+            else if (rdNu.Checked)
+                GioiTinh = "Nữ";
+
+            // Câu SQL đúng
+            string sql = "UPDATE THONGTIN SET HOTEN = @ten, BOMON = @bomon, GIOITINH = @gt WHERE MSSV = @ma";
+
+            using (SqlCommand cmd = new SqlCommand(sql, ketnoi))
+            {
+                cmd.Parameters.AddWithValue("@ma", MSSV);
+                cmd.Parameters.AddWithValue("@ten", HoTen);
+                cmd.Parameters.AddWithValue("@bomon", BoMon);
+                cmd.Parameters.AddWithValue("@gt", GioiTinh);
+                cmd.ExecuteNonQuery();
+            }
+
+            hienThiCSDL(); // Cập nhật lại bảng
+        }
+        public void Loc()
+        {
+            string bomon = cboBoMon.Text.Trim();
+
+            if (string.IsNullOrEmpty(bomon))
+            {
+                MessageBox.Show("Vui lòng chọn Bộ Môn để lọc.", "Thông báo");
+                return;
+            }
+
+            string sql = "SELECT * FROM THONGTIN WHERE BOMON = @bomon";
+            SqlCommand cmd = new SqlCommand(sql, ketnoi);
+            cmd.Parameters.AddWithValue("@bomon", bomon);
+
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+
+            dgvSinhVien.DataSource = dt;
+        }
+
+
+        private void btnShow_Click(object sender, EventArgs e)
+        {
+            hienThiCSDL();
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            xoa();
+
+            hienThiCSDL(); // Làm mới danh sách sau khi xoá
+        }
+
+        private void dgvSinhVien_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                DataGridViewRow row = dgvSinhVien.Rows[e.RowIndex];
+
+                txtMSSV.Text = row.Cells["MSSV"].Value?.ToString();
+                txtHoTen.Text = row.Cells["HOTEN"].Value?.ToString();
+                cboBoMon.Text = row.Cells["BOMON"].Value?.ToString();
+
+                string gioiTinh = row.Cells["GIOITINH"].Value?.ToString()?.Trim().ToLower();
+
+
+                if (gioiTinh == "nam")
+                {
+                    rdNam.Checked = true;
+                    rdNu.Checked = false;
+                }
+                else if (gioiTinh == "nữ" || gioiTinh == "nu")
+                {
+                    rdNu.Checked = true;
+                    rdNam.Checked = false;
+                }
+                else
+                {
+                    rdNam.Checked = false;
+                    rdNu.Checked = false;
+                }
+            }
+        }
+
+        private void btnReset_Click(object sender, EventArgs e)
+        {
+            ResetForm();
+        }
+
+        private void btnInsert_Click(object sender, EventArgs e)
+        {
+            Them();
+        }
+
+        private void btnUpdate_Click(object sender, EventArgs e)
+        {
+            Sua();
+        }
+
+        private void btnFilter_Click(object sender, EventArgs e)
+        {
+            Loc();
+        }
+    }
+}
